@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './index.css'
+import '@css/index.css'; // Updated to use alias for CSS import
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
