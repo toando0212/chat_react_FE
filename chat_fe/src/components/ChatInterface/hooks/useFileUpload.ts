@@ -5,13 +5,13 @@ const useFileUpload = () => {
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileUpload = (file: File) => {
+  const handleFileUpload = (file: File): boolean => {
     setError(null);
     if (file.size > 5 * 1024) {
       setError('File exceeds 5KB.');
       setUploadedFile(null);
       setFileContent(null);
-      return;
+      return false; // indicate rejection so caller can clear input element
     }
 
     const reader = new FileReader();
@@ -26,6 +26,8 @@ const useFileUpload = () => {
       setFileContent(null);
     };
     reader.readAsText(file);
+
+    return true;
   };
 
   const removeUploadedFile = () => {

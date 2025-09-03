@@ -24,6 +24,8 @@ const ChatInterface: React.FC = () => {
   const { uploadedFile, fileContent, error, handleFileUpload, removeUploadedFile } = useFileUpload();
   const { selectedModel, handleModelSelect } = useModelSelection(MODELS[0].value, MODELS);
   const [input, setInput] = React.useState('');
+  const [fileInputKey, setFileInputKey] = React.useState(0);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const sendMessage = async () => {
     const trimmed = input.trim();
@@ -44,8 +46,18 @@ const ChatInterface: React.FC = () => {
       formData.append('model', selectedModel);
       const res = await fetch(FULL_API_URL, { method: 'POST', body: formData });
       const data = await res.json();
-      addMessage({ id: Date.now(), role: 'assistant', content: data.answer || 'No answer received.' });
-    } catch {
+
+      // Remove <think> tags from the response (robust)
+      const cleanAnswer = (data.answer || '').replace(/<think[^>]*>|<\/think>/gi, '');
+
+      // Ensure assistant content keeps markdown/code formatting; push as-is
+      addMessage({ id: Date.now(), role: 'assistant', content: cleanAnswer || 'No answer received.' });
+      // If backend signaled file too large, clear uploaded file on FE
+      if (data.error?.includes('exceeds') || data.error?.includes('exceed')) {
+        // clear file info so it won't be sent/displayed
+        removeUploadedFile();
+      }
+    } catch (err) {
       addMessage({ id: Date.now(), role: 'assistant', content: 'Sorry, something went wrong.' });
     } finally {
       setLoading(false);
@@ -71,7 +83,25 @@ const ChatInterface: React.FC = () => {
           <input
             type="file"
             accept=".js,.ts,.tsx,.jsx,.css,.html"
-            onChange={(e) => e.target.files && handleFileUpload(e.target.files[0])}
+            ref={fileInputRef}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const accepted = handleFileUpload(file);
+              if (!accepted) {
+                // clear the input element so filename won't remain visible
+                try {
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                } catch (err) {
+                  (e.target as HTMLInputElement).value = '';
+                }
+                // ensure uploadedFile state is cleared too
+                removeUploadedFile();
+                // force re-create the input element to ensure browser doesn't show filename
+                setFileInputKey((k) => k + 1);
+              }
+            }}
+            key={fileInputKey}
           />
           <FileUploadInfo uploadedFile={uploadedFile} onFileRemove={removeUploadedFile} />
         </div>
