@@ -7,8 +7,12 @@ const useModelSelection = (initialModel: string, models: Model[]) => {
   );
 
   const handleModelSelect = (modelValue: string) => {
-    setSelectedModel(modelValue);
-    localStorage.setItem('selectedModel', modelValue);
+    if (models.some((model) => model.value === modelValue)) {
+      setSelectedModel(modelValue);
+      localStorage.setItem('selectedModel', modelValue);
+    } else {
+      console.warn(`Model "${modelValue}" is not in the list of available models.`);
+    }
   };
 
   return { selectedModel, handleModelSelect };
